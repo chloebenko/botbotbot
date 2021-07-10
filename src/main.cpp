@@ -76,8 +76,10 @@ void loop() {
 
   pwm_start(RIGHT_WHEEL, MOTORFREQ, speed, RESOLUTION_12B_COMPARE_FORMAT);
   pwm_start(LEFT_WHEEL, MOTORFREQ, speed, RESOLUTION_12B_COMPARE_FORMAT);
-  
+
   delay(6);
+
+  // random comment
 
   loopcount++;
 }
