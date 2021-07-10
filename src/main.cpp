@@ -5,11 +5,14 @@
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
 #define OLED_RESET 	-1 // This display does not have a reset pin accessible
-#define MOTOR_RIGHT PB_9
-#define MOTOR_LEFT PB_8
+#define RIGHT_WHEEL PB_9
+// #define LEFT_WHEEL PB_8
+#define LEFT_WHEEL PA_6
+// #define MOTOR2_LEFT PA_7
 #define MOTORFREQ 200
-#define REFLEC_SENSOR PA_0
-#define POT PA_7
+#define POT PA_0
+#define REFLECT_SENSOR_LEFT PA_4
+#define REFLECT_SENSOR_RIGHT PA_5
 
 volatile int lasterror = 0;
 volatile int kp = 5;
@@ -24,9 +27,12 @@ void handle_interrupt();
 
 void setup()
 {
-  pinMode(REFLEC_SENSOR, INPUT);
-  pinMode(MOTOR_LEFT, OUTPUT);
-  pinMode(MOTOR_RIGHT, OUTPUT);
+  pinMode(REFLECT_SENSOR_LEFT, INPUT);
+  pinMode(REFLECT_SENSOR_RIGHT, INPUT);
+  // pinMode(LEFT_WHEEL, OUTPUT);
+  pinMode(RIGHT_WHEEL, OUTPUT);
+  pinMode(LEFT_WHEEL, OUTPUT);
+  // pinMode(MOTOR2_LEFT, OUTPUT);
   pinMode(POT, INPUT);
 
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
@@ -47,13 +53,32 @@ void setup()
 }
 
 void loop() {
-  display.clearDisplay();
-  int reflectance = analogRead(REFLEC_SENSOR);
-  int pot = analogRead(POT);
-  display.setCursor(0,0);
-  display.println("Reflectance: ");
-  display.println(reflectance);
-  display.println("Pot: ");
-  display.println(pot);
-  display.display();
+
+  if (loopcount > 0){
+    display.clearDisplay();
+    int reflectance_left = analogRead(REFLECT_SENSOR_LEFT);
+    int reflectance_right = analogRead(REFLECT_SENSOR_RIGHT);
+    int pot = analogRead(POT);
+    display.setCursor(0,0);
+    display.println("Reflectance left: ");
+    display.println(reflectance_left);
+    display.println("Reflectance right: ");
+    display.println(reflectance_right);
+    display.println("Pot: ");
+    display.println(pot);
+    display.display();
+    loopcount = 0;
+  }
+
+  int speed = 2 * analogRead(POT);
+
+  // !!!!!BE CAREFUL ABOUT HAVING 2 PWMs ON FOR THE SAME MOTOR!!!!! 
+
+  pwm_start(RIGHT_WHEEL, MOTORFREQ, speed, RESOLUTION_12B_COMPARE_FORMAT);
+  pwm_start(LEFT_WHEEL, MOTORFREQ, speed, RESOLUTION_12B_COMPARE_FORMAT);
+  
+  delay(6);
+
+  loopcount++;
 }
+
