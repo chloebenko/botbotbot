@@ -108,31 +108,35 @@ void loop() {
 
   // right off, left on. Boost right wheel.
   else if (error_right < TAPE_ERROR_THRESH && error_left > TAPE_ERROR_THRESH){
-	  pwm_start(RIGHT_WHEEL, MOTORFREQ, speed_right + kp, RESOLUTION_12B_COMPARE_FORMAT);
-    pwm_start(LEFT_WHEEL, MOTORFREQ, speed_left - kp, RESOLUTION_12B_COMPARE_FORMAT);
+	  pwm_start(RIGHT_WHEEL, MOTORFREQ, speed_right + 100, RESOLUTION_12B_COMPARE_FORMAT);
+    pwm_start(LEFT_WHEEL, MOTORFREQ, speed_left - 100, RESOLUTION_12B_COMPARE_FORMAT);
 	  error_state = 1;
   }
 
   // left off, right on. Boost left wheel. 
   else if(error_left < TAPE_ERROR_THRESH && error_right > TAPE_ERROR_THRESH){
-    pwm_start(RIGHT_WHEEL, MOTORFREQ, speed_right - kp, RESOLUTION_12B_COMPARE_FORMAT);
-    pwm_start(LEFT_WHEEL, MOTORFREQ, speed_left + kp, RESOLUTION_12B_COMPARE_FORMAT);
+    pwm_start(RIGHT_WHEEL, MOTORFREQ, speed_right - 100, RESOLUTION_12B_COMPARE_FORMAT);
+    pwm_start(LEFT_WHEEL, MOTORFREQ, speed_left + 100, RESOLUTION_12B_COMPARE_FORMAT);
     error_state = -1;
   }
 
   // both off, left was last on. Boost right wheel. 
   else if (error_right < TAPE_ERROR_THRESH && error_left < TAPE_ERROR_THRESH && (last_error_state == 1 || last_error_state == 5)){
-    pwm_start(RIGHT_WHEEL, MOTORFREQ, speed_right + 3 * kp, RESOLUTION_12B_COMPARE_FORMAT);
-    pwm_start(LEFT_WHEEL, MOTORFREQ, speed_left - kp, RESOLUTION_12B_COMPARE_FORMAT);
+    pwm_start(RIGHT_WHEEL, MOTORFREQ, speed_right + kp, RESOLUTION_12B_COMPARE_FORMAT);
+    pwm_start(LEFT_WHEEL, MOTORFREQ, 0, RESOLUTION_12B_COMPARE_FORMAT);
     error_state = 5;
+    delay(1000);
   }
 
   // both off, right was last on
   else if (error_right < TAPE_ERROR_THRESH && error_left < TAPE_ERROR_THRESH && (last_error_state == -1 || last_error_state == -5)){
-    pwm_start(RIGHT_WHEEL, MOTORFREQ, speed_right - kp, RESOLUTION_12B_COMPARE_FORMAT);
-    pwm_start(LEFT_WHEEL, MOTORFREQ, speed_left + 3 * kp, RESOLUTION_12B_COMPARE_FORMAT);
+    pwm_start(RIGHT_WHEEL, MOTORFREQ, 0, RESOLUTION_12B_COMPARE_FORMAT); 
+    pwm_start(LEFT_WHEEL, MOTORFREQ, speed_left + kp, RESOLUTION_12B_COMPARE_FORMAT);
     error_state = -5;
+    delay(1000);
   }
+
+  last_error_state = error_state;
 
   delay(6);
 
