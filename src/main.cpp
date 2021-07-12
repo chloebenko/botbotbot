@@ -125,7 +125,6 @@ void loop() {
     pwm_start(RIGHT_WHEEL, MOTORFREQ, speed_right + kp, RESOLUTION_12B_COMPARE_FORMAT);
     pwm_start(LEFT_WHEEL, MOTORFREQ, 0, RESOLUTION_12B_COMPARE_FORMAT);
     error_state = 5;
-    delay(1000);
   }
 
   // both off, right was last on
@@ -133,7 +132,6 @@ void loop() {
     pwm_start(RIGHT_WHEEL, MOTORFREQ, 0, RESOLUTION_12B_COMPARE_FORMAT); 
     pwm_start(LEFT_WHEEL, MOTORFREQ, speed_left + kp, RESOLUTION_12B_COMPARE_FORMAT);
     error_state = -5;
-    delay(1000);
   }
 
   last_error_state = error_state;
