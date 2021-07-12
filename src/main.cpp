@@ -1,59 +1,124 @@
-#include "Arduino.h"
+
+#include <Arduino.h>
 #include <Wire.h>
 #include <Adafruit_SSD1306.h>
+
+#define R_MOTOR PA_8
+#define L_MOTOR PA_9
+
+#define R_SENSOR PA0
+#define L_SENSOR PA1
+
+
+#define FREQ 100
+#define L_BASE_SPEED 800
+#define SPEED_THRESH 600
+#define SPEED_MULT 1.3
+#define LOOP_DELAY 100
+#define RUN_DELAY 3000
+
+#define RIGHT_ON 0
+#define LEFT_ON 1
+#define BOTH_OFF_MULT 3
 
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
 #define OLED_RESET 	-1 // This display does not have a reset pin accessible
-#define MOTOR_RIGHT PB_9
-#define MOTOR_LEFT PB_8
-#define MOTORFREQ 200
-#define REFLEC_SENSOR PA_0
-#define POT PA_7
-
-volatile int lasterror = 0;
-volatile int kp = 5;
-volatile int kd = 0;
-volatile int loopcount = 0;
-
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-void handle_interrupt();
 
-// Set LED_BUILTIN if it is not defined by Arduino framework
-// #define LED_BUILTIN 13
+volatile int R_BASE_SPEED = SPEED_MULT * L_BASE_SPEED;
 
-void setup()
-{
-  pinMode(REFLEC_SENSOR, INPUT);
-  pinMode(MOTOR_LEFT, OUTPUT);
-  pinMode(MOTOR_RIGHT, OUTPUT);
-  pinMode(POT, INPUT);
+volatile int offTapeThresh = 70;
+volatile int oneOffError = 150; 
+volatile double bothOffMult;
+volatile int lastOn;
 
-  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
- 
-  // Displays Adafruit logo by default. call clearDisplay immediately if you don't want this.
-  display.display();
-  delay(2000);
+volatile int loopCount = 0;
 
-  // Displays "Hello world!" on the screen
-  display.clearDisplay();
-  display.setTextSize(1);
-  display.setTextColor(SSD1306_WHITE);
-  display.setCursor(0,0);
-  display.println("Yo g");
-  display.display();
-  // value after motorfreq determines the dutycycle
-  // ex: 2000 gives around 50% duty cycle (2000/4096(max BP value))
+void motorStart(PinName P1, PinName P2, int finalSpeed);
+
+void setup() {
+
+pinMode(R_MOTOR,OUTPUT);
+pinMode(L_MOTOR,OUTPUT);
+
+pinMode(L_SENSOR, INPUT);
+pinMode(R_SENSOR, INPUT);
+
+display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
+display.setTextSize(1);
+display.setTextColor(SSD1306_WHITE); 
+
+motorStart(R_MOTOR, L_MOTOR, SPEED_THRESH);
 }
+
+
 
 void loop() {
-  display.clearDisplay();
-  int reflectance = analogRead(REFLEC_SENSOR);
-  int pot = analogRead(POT);
-  display.setCursor(0,0);
-  display.println("Reflectance: ");
-  display.println(reflectance);
-  display.println("Pot: ");
-  display.println(pot);
-  display.display();
+  int rValue = analogRead(R_SENSOR);
+  int lValue = analogRead(L_SENSOR);
+
+  // if(loopCount == 100){
+  //   display.setCursor(0,0);
+  //   display.println(analogRead(L_SENSOR));
+  //   display.println(analogRead(R_SENSOR));
+  //   display.display();
+  //   display.clearDisplay();
+  //   loopCount=0;
+  // }
+
+  if(rValue > offTapeThresh && lValue > offTapeThresh){
+    pwm_start(L_MOTOR, FREQ, L_BASE_SPEED, RESOLUTION_12B_COMPARE_FORMAT);
+    pwm_start(R_MOTOR, FREQ, L_BASE_SPEED, RESOLUTION_12B_COMPARE_FORMAT);
+  }
+
+  else if(rValue <= offTapeThresh && lValue > offTapeThresh){
+    lastOn = LEFT_ON;
+
+    pwm_start(L_MOTOR, FREQ, L_BASE_SPEED - oneOffError, RESOLUTION_12B_COMPARE_FORMAT);
+    pwm_start(R_MOTOR, FREQ, L_BASE_SPEED + oneOffError, RESOLUTION_12B_COMPARE_FORMAT);
+  }
+
+  else if(rValue > offTapeThresh && lValue <= offTapeThresh){
+    lastOn = RIGHT_ON;
+
+    pwm_start(L_MOTOR, FREQ, L_BASE_SPEED + oneOffError, RESOLUTION_12B_COMPARE_FORMAT);
+    pwm_start(R_MOTOR, FREQ, L_BASE_SPEED - oneOffError, RESOLUTION_12B_COMPARE_FORMAT);
+  }
+
+  else if(rValue <= offTapeThresh && lValue <= offTapeThresh){
+    if(lastOn == RIGHT_ON){
+      pwm_start(L_MOTOR, FREQ, L_BASE_SPEED + (oneOffError * BOTH_OFF_MULT), RESOLUTION_12B_COMPARE_FORMAT);
+      pwm_start(R_MOTOR, FREQ, L_BASE_SPEED - (oneOffError * BOTH_OFF_MULT), RESOLUTION_12B_COMPARE_FORMAT);
+    }
+    else if(lastOn == LEFT_ON){
+      pwm_start(L_MOTOR, FREQ, L_BASE_SPEED - (oneOffError * BOTH_OFF_MULT), RESOLUTION_12B_COMPARE_FORMAT);
+      pwm_start(R_MOTOR, FREQ, L_BASE_SPEED + (oneOffError * BOTH_OFF_MULT), RESOLUTION_12B_COMPARE_FORMAT);
+    }
+    else{
+      pwm_start(L_MOTOR, FREQ, 0, RESOLUTION_12B_COMPARE_FORMAT);
+      pwm_start(R_MOTOR, FREQ, 0, RESOLUTION_12B_COMPARE_FORMAT);
+    }
+  }
+  else{
+      pwm_start(L_MOTOR, FREQ, 0, RESOLUTION_12B_COMPARE_FORMAT);
+      pwm_start(R_MOTOR, FREQ, 0, RESOLUTION_12B_COMPARE_FORMAT);
+    }
+
+  //   loopCount++;
 }
+
+
+
+void motorStart(PinName P1, PinName P2, int finalSpeed){
+  int speed = 0;
+
+  while(speed < finalSpeed){
+    pwm_start(P1, FREQ, speed, RESOLUTION_12B_COMPARE_FORMAT);
+    pwm_start(P2, FREQ, speed, RESOLUTION_12B_COMPARE_FORMAT);
+    speed += 50;
+    delay(LOOP_DELAY);
+  }
+
+}
+
