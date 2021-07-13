@@ -14,10 +14,10 @@
 #define POT_LEFT PA_1
 #define REFLECT_SENSOR_LEFT PA_4
 #define REFLECT_SENSOR_RIGHT PA_5
-#define TAPE_RIGHT_THRESH 50
-#define TAPE_LEFT_THRESH 50
+#define TAPE_RIGHT_THRESH 100
+#define TAPE_LEFT_THRESH 100
 #define POT_KP PA_2
-#define TAPE_ERROR_THRESH 150
+#define STATE_1_SPEED_ADJUST 250
 
 volatile int last_error_state = 0;
 volatile int error_state = 0;
@@ -67,71 +67,64 @@ void loop() {
     int reflectance_right = analogRead(REFLECT_SENSOR_RIGHT);
     int pot_right = analogRead(POT_RIGHT);
     int pot_left = analogRead(POT_LEFT);
-    int error_right = reflectance_right - TAPE_RIGHT_THRESH;
-    int error_left = reflectance_left - TAPE_LEFT_THRESH;
     display.setCursor(0,0);
     display.print("Reflec L: ");
     display.println(reflectance_left);
     display.print("Reflec R: ");
     display.println(reflectance_right);
-    display.print("Speed L: ");
+    display.print("Thres L: ");
     display.println(pot_left);
-    display.print("Speed R: ");
+    display.print("Thres R: ");
     display.println(pot_right);
     display.print("kp: ");
     display.println(pot_kp);
-    display.print("error right: ");
-    display.println(error_right);
-    display.print("error left: ");
-    display.println(error_left);
     display.display();
     loopcount = 0;
   }
 
-  int speed_right = analogRead(POT_RIGHT);
-  int speed_left = analogRead(POT_LEFT);
+  // int speed_right = analogRead(POT_RIGHT);
+  // int speed_left = analogRead(POT_LEFT);
   int reflectance_right = analogRead(REFLECT_SENSOR_RIGHT);
   int reflectance_left = analogRead(REFLECT_SENSOR_LEFT);
   int kp = analogRead(POT_KP);
-
-  int error_right = reflectance_right - TAPE_RIGHT_THRESH;
-  int error_left = reflectance_left - TAPE_LEFT_THRESH;
+  int speed_right = 650;
+  int speed_left = 850;
+  int thres_right = TAPE_RIGHT_THRESH;
+  int thres_left = TAPE_LEFT_THRESH;
 
   // !!!!!BE CAREFUL ABOUT HAVING 2 PWMs ON FOR THE SAME MOTOR!!!!! 
 
   // going straight, both are on the tape
-  if (error_right >= TAPE_ERROR_THRESH && error_left >= TAPE_ERROR_THRESH){
+  if (reflectance_right > thres_left && reflectance_left > thres_left){
     pwm_start(RIGHT_WHEEL, MOTORFREQ, speed_right, RESOLUTION_12B_COMPARE_FORMAT);
     pwm_start(LEFT_WHEEL, MOTORFREQ, speed_left, RESOLUTION_12B_COMPARE_FORMAT);
     error_state = 0;
   }
 
   // right off, left on. Boost right wheel.
-  else if (error_right < TAPE_ERROR_THRESH && error_left > TAPE_ERROR_THRESH){
-	  pwm_start(RIGHT_WHEEL, MOTORFREQ, speed_right + 100, RESOLUTION_12B_COMPARE_FORMAT);
-    pwm_start(LEFT_WHEEL, MOTORFREQ, speed_left - 100, RESOLUTION_12B_COMPARE_FORMAT);
+  else if (reflectance_right <= thres_right && reflectance_left > thres_left){
+	  pwm_start(RIGHT_WHEEL, MOTORFREQ, speed_right + STATE_1_SPEED_ADJUST, RESOLUTION_12B_COMPARE_FORMAT);
+    pwm_start(LEFT_WHEEL, MOTORFREQ, speed_left - STATE_1_SPEED_ADJUST, RESOLUTION_12B_COMPARE_FORMAT);
 	  error_state = 1;
   }
 
   // left off, right on. Boost left wheel. 
-  else if(error_left < TAPE_ERROR_THRESH && error_right > TAPE_ERROR_THRESH){
-    pwm_start(RIGHT_WHEEL, MOTORFREQ, speed_right - 100, RESOLUTION_12B_COMPARE_FORMAT);
-    pwm_start(LEFT_WHEEL, MOTORFREQ, speed_left + 100, RESOLUTION_12B_COMPARE_FORMAT);
+  else if(reflectance_left <= thres_left && reflectance_right > thres_right){
+    pwm_start(RIGHT_WHEEL, MOTORFREQ, speed_right - STATE_1_SPEED_ADJUST, RESOLUTION_12B_COMPARE_FORMAT);
+    pwm_start(LEFT_WHEEL, MOTORFREQ, speed_left + STATE_1_SPEED_ADJUST, RESOLUTION_12B_COMPARE_FORMAT);
     error_state = -1;
   }
 
   // both off, left was last on. Boost right wheel. 
-  else if (error_right < TAPE_ERROR_THRESH && error_left < TAPE_ERROR_THRESH && (last_error_state == 1 || last_error_state == 5)){
+  else if (reflectance_right <= thres_right && reflectance_left <= thres_left && last_error_state == 1){
     pwm_start(RIGHT_WHEEL, MOTORFREQ, speed_right + kp, RESOLUTION_12B_COMPARE_FORMAT);
     pwm_start(LEFT_WHEEL, MOTORFREQ, 0, RESOLUTION_12B_COMPARE_FORMAT);
-    error_state = 5;
   }
 
   // both off, right was last on
-  else if (error_right < TAPE_ERROR_THRESH && error_left < TAPE_ERROR_THRESH && (last_error_state == -1 || last_error_state == -5)){
+  else if (reflectance_right <= thres_right && reflectance_left <= thres_left && last_error_state == -1){
     pwm_start(RIGHT_WHEEL, MOTORFREQ, 0, RESOLUTION_12B_COMPARE_FORMAT); 
     pwm_start(LEFT_WHEEL, MOTORFREQ, speed_left + kp, RESOLUTION_12B_COMPARE_FORMAT);
-    error_state = -5;
   }
 
   last_error_state = error_state;
