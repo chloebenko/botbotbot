@@ -28,11 +28,12 @@
 volatile int last_error_state = 0;
 volatile int error_state = 0;
 volatile int loopcount = 0;
-volatile bool start = true;
-volatile int servo_speed = 500;
+volatile int servo_speed = 400;
+volatile float servo_angle = 155.0;
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 void handle_interrupt();
+int slopeServoSpeed(float angle);
 
 // Set LED_BUILTIN if it is not defined by Arduino framework
 // #define LED_BUILTIN 13
@@ -63,7 +64,7 @@ void setup()
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
   display.setCursor(0,0);
-  display.println("I love you Angel <3");
+  display.println("You got this Angel! <3");
   display.display();
   // value after motorfreq determines the dutycycle
   // ex: 2000 gives around 50% duty cycle (2000/4096(max BP value))
@@ -71,16 +72,7 @@ void setup()
 
 void loop() {
 
-  if(servo_speed >= 2500){
-    servo_speed = 500;
-  }
-
-  /* if (loopcount == 20 && start == true){
-    pwm_start(ROTOR, 200, 2000, RESOLUTION_12B_COMPARE_FORMAT);
-    start = false;
-  }
-
-  if (loopcount > 50){
+  /* if (loopcount > 100){
     display.clearDisplay();
     int pot_kp = analogRead(POT_KP);
     int reflectance_left = analogRead(REFLECT_SENSOR_LEFT);
@@ -100,6 +92,8 @@ void loop() {
     display.println(pot_right);
     display.print("kp: ");
     display.println(pot_kp);
+    display.print("servo angle: ");
+    display.println(servo_angle);
     display.display();
     loopcount = 0;
   }
@@ -159,14 +153,34 @@ void loop() {
     pwm_start(LEFT_WHEEL, MOTORFREQ, speed_left + kp, RESOLUTION_12B_COMPARE_FORMAT);
   }
 
-  last_error_state = error_state; */
+  last_error_state = error_state;
+
+  delay(11); */
+
+  display.clearDisplay();
+  display.setCursor(0,0);
+  display.print("servo angle: ");
+  display.println(servo_angle);
+  display.display(); 
+
+  servo_speed = slopeServoSpeed(servo_angle);
 
   pwm_start(SERVO_SLOPE, SERVO_FREQ, servo_speed, MICROSEC_COMPARE_FORMAT);
 
-  delay(11);
+  // servo_angle = servo_angle - 5;
 
-  servo_speed++;
+  delay(2000); 
+  
+  if (servo_angle <= 0.0){
+    servo_angle = 180.0;
+  }
 
-  loopcount++;
+  loopcount++;  
 }
+
+int slopeServoSpeed(float angle) {
+  return (int) angle * (2000.0/180.0) + 400.0;
+}
+
+
 
