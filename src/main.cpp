@@ -27,6 +27,7 @@
 #define REFLECT_CAN_1 PA_6
 #define REFLECT_CAN_2 PA_7
 #define CAN_REFLECT_THRES 80
+#define DROP_OFF_SWITCH PA3
 
 volatile int last_error_state = 0;
 volatile int error_state = 0;
@@ -48,7 +49,7 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire1, OLED_RESET);
 // First OLED setup
 // SDA to B7 and SCK to B6
 // Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-void handle_interrupt();
+void dropOff_interrupt();
 int slopeServoSpeed(float angle);
 void slopeServoPosition(int position);
 int flapServoSpeed(float angle);
@@ -74,6 +75,9 @@ void setup()
   pinMode(SERVO_SLOPE, OUTPUT);
   pinMode(REFLECT_CAN_1, INPUT);
   pinMode(REFLECT_CAN_2, INPUT);
+  pinMode(DROP_OFF_SWITCH, INPUT_PULLUP);
+
+  attachInterrupt(digitalPinToInterrupt(DROP_OFF_SWITCH), dropOff_interrupt, RISING);
 
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
  
@@ -101,7 +105,6 @@ void loop() {
     start = false;
   } */
 
-  
   if (loopcount > 100){
     display.clearDisplay();
     int pot_kp = analogRead(POT_KP);
@@ -233,7 +236,7 @@ void loop() {
     back_test = 0;
   } */
 
-  
+
   /* int can1 = analogRead(REFLECT_CAN_1);
   int can2 = analogRead(REFLECT_CAN_2);
   display.clearDisplay();
@@ -292,6 +295,18 @@ void flapPosition(int position){
     flap_speed = flapServoSpeed(90.0);
     pwm_start(SERVO_FLAP, SERVO_FREQ, flap_speed, MICROSEC_COMPARE_FORMAT);
   }
+}
+
+// ********** DROP OFF method when micro switch gets pressed at drop off
+void dropOff_interrupt(){
+  // turning the rotor and wheels off
+  pwm_start(ROTOR, MOTORFREQ, 0, RESOLUTION_12B_COMPARE_FORMAT);
+  pwm_start(RIGHT_WHEEL_BACKWARDS, MOTORFREQ, 0, RESOLUTION_12B_COMPARE_FORMAT);
+  pwm_start(LEFT_WHEEL_BACKWARDS, MOTORFREQ, 0 , RESOLUTION_12B_COMPARE_FORMAT);
+  pwm_start(RIGHT_WHEEL, MOTORFREQ, 0, RESOLUTION_12B_COMPARE_FORMAT);
+  pwm_start(LEFT_WHEEL, MOTORFREQ, 0, RESOLUTION_12B_COMPARE_FORMAT);
+  // opening the flap
+  flapPosition(1);
 }
 
 
